@@ -603,7 +603,7 @@ prepare_file(File, Modes) ->
     Tmp = make_tmp(File),
     %% rename is atomic-ish so we will never accidentally write an empty wal file
     %% using prim_file here as file:rename/2 uses the file server
-    ok = prim_file:rename(Tmp, File),
+    ok = aprim_file:rename(Tmp, File),
     case ra_file_handle:open(File, Modes) of
         {ok, Fd2} ->
             {ok, ?HEADER_SIZE} = file:position(Fd2, ?HEADER_SIZE),
@@ -614,17 +614,17 @@ prepare_file(File, Modes) ->
 
 make_tmp(File) ->
     Tmp = filename:rootname(File) ++ ".tmp",
-    {ok, Fd} = file:open(Tmp, [write, binary, raw]),
-    ok = file:write(Fd, <<?MAGIC, ?CURRENT_VERSION:8/unsigned>>),
-    ok = file:sync(Fd),
-    ok = file:close(Fd),
+    {ok, Fd} = afile:open(Tmp, [write, binary, raw]),
+    ok = afile:write(Fd, <<?MAGIC, ?CURRENT_VERSION:8/unsigned>>),
+    ok = afile:sync(Fd),
+    ok = afile:close(Fd),
     Tmp.
 
 maybe_pre_allocate(#conf{pre_allocate = true,
                          write_strategy = Strat} = Conf, Fd, Max0)
   when Strat /= o_sync ->
     Max = Max0 - ?HEADER_SIZE,
-    case file:allocate(Fd, ?HEADER_SIZE, Max) of
+    case afile:allocate(Fd, ?HEADER_SIZE, Max) of
         ok ->
             {ok, Max} = file:position(Fd, Max),
             ok = file:truncate(Fd),
@@ -760,7 +760,7 @@ open_existing(File) ->
     end.
 
 open_at_first_record(File) ->
-    {ok, Fd} = file:open(File, [read, binary, raw]),
+    {ok, Fd} = afile:open(File, [read, binary, raw]),
     case file:read(Fd, 5) of
         {ok, <<?MAGIC, ?CURRENT_VERSION:8/unsigned>>} ->
             %% the only version currently supported
@@ -770,7 +770,7 @@ open_at_first_record(File) ->
     end.
 
 close_existing(Fd) ->
-    case file:close(Fd) of
+    case afile:close(Fd) of
         ok ->
             ok;
         {error, Reason} ->
